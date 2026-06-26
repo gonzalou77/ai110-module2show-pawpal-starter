@@ -5,14 +5,24 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+    Below was the initial design
+    PawPal+ Class Design
+
+Class	Role	Key Responsibilities
+Pet	Data model	Stores species, name, age, special needs
+Owner	Data model	Stores name, available hours, preferences; owns one or more Pets
+Task	Data model	Represents a care task: title, duration, priority, category (feeding, walk, vet, etc.)
+Scheduler	Logic engine	Takes an Owner + their Pet(s) + a list of Tasks, applies constraints, and produces an ordered daily plan
+
 - What classes did you include, and what responsibilities did you assign to each?
+    I included all 4 classes: Pet, Owner, Task, and Scheduler.
+    In short, Pets included species, name, age, etc.; Owner included: add task, check daily schedule;
+    Task just assigns priority, duration, categorym, etc; and Scheduler generates the schedule, deletes, or edits the  schedule.
 
 **b. Design changes**
 
 - Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
-
-Below i have defined attributes and methods:
+    Yes, below is how i changed it
 
 1) Pet
     - Attributes
@@ -62,6 +72,10 @@ Below i have defined attributes and methods:
         1) Generate Schedule
         2) Sort Schedule
         3) Edit Schedule
+The proposed design from Claude is below and i did change it during implementation
+- If yes, describe at least one change and why you made it.
+    I would like my pawpal+ app to give me good comprehensive information on the care of pets, including their gotcha day and birthday
+
 
 ---
 
