@@ -12,6 +12,57 @@
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+Below i have defined attributes and methods:
+
+1) Pet
+    - Attributes
+        1) Species (limited to 'Dog' or 'Cat')
+        2) Name
+        3) Date of Birth
+        4) Breed
+        5) 'Gotcha Day' Date
+        6) Next Vet Visit
+        7) Flea & Tick Prevention (Include Heartworm Prevention if Dog) due date
+    - Method
+        1) Check Feeding Schedule
+        2) Water Refill Notification
+        3) Vaccination Schedule Check
+        4) Daily Schedule Check
+2) Task
+    - Attributes
+        1) Frequency
+        2) Time
+        3) Priority
+        4) Status
+        5) Duration
+        6) Urgency
+    - Method
+        1) Add Task
+        2) Remove Task
+        3) Edit Task
+3) Owner
+    - Attributes
+        1) Name
+        2) Number of Pets
+        3) Availability
+        4) Age
+    - Method
+        1) Check Feeding Schedule
+        2) Check Pet Info
+        3) Vaccination Schedule Check
+        4) Daily Schedule Check
+        5) Vet Visit Schedule
+4) Scheduler
+    - Attributes
+        1) Today's Schedule
+        2) Deferred Tasks
+        3) Conflicts
+        4) Vet Visits
+    - Method
+        1) Generate Schedule
+        2) Sort Schedule
+        3) Edit Schedule
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs

@@ -1,0 +1,57 @@
+classDiagram
+    class Pet {
+        +String species
+        +String name
+        +Date date_of_birth
+        +String breed
+        +Date gotcha_day
+        +Date next_vet_visit
+        +Date flea_tick_due
+        +Date heartworm_due
+        +check_feeding_schedule() void
+        +water_refill_notification() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+    }
+
+    class Task {
+        +String frequency
+        +Time time
+        +String priority
+        +String status
+        +int duration
+        +String urgency
+        +Owner owner
+        +Pet pet
+    }
+
+    class Owner {
+        +String name
+        +int number_of_pets
+        +List availability
+        +int age
+        +check_feeding_schedule() void
+        +check_pet_info() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+        +vet_visit_schedule() void
+        +add_task(task Task) void
+        +remove_task(task Task) void
+        +edit_task(task Task) void
+    }
+
+    class Scheduler {
+        +List todays_schedule
+        +List deferred_tasks
+        +List conflicts
+        +List vet_visits
+        +generate_schedule() void
+        +sort_schedule() void
+        +edit_schedule() void
+    }
+
+    Owner "1" --> "1..*" Pet : owns
+    Owner "1" --> "0..*" Task : manages
+    Scheduler "1" --> "1" Owner : schedules for
+    Scheduler "1" --> "0..*" Task : organizes
+    Pet "1" --> "0..*" Task : has care tasks
