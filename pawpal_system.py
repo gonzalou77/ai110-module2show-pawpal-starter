@@ -20,15 +20,17 @@ class Pet:
     heartworm_due: Optional[date] = None
 
     def check_feeding_schedule(self) -> str:
-        # Dogs typically eat twice a day, cats can free-feed or twice a day
+        """Return a feeding reminder string based on the pet's species."""
         if self.species.lower() == "dog":
             return f"{self.name} should be fed twice a day: morning and evening."
         return f"{self.name} should be fed twice a day or have food available."
 
     def water_refill_notification(self) -> str:
+        """Return a reminder to refill the pet's water bowl."""
         return f"Refill {self.name}'s water bowl at least twice today."
 
     def vaccination_schedule_check(self) -> str:
+        """Return any overdue flea, tick, or heartworm treatments for this pet."""
         today = date.today()
         lines = []
         if self.flea_tick_due and self.flea_tick_due <= today:
@@ -38,6 +40,7 @@ class Pet:
         return "\n".join(lines) if lines else f"{self.name} is up to date on treatments."
 
     def daily_schedule_check(self) -> str:
+        """Return a combined daily summary of feeding, water, and vaccination checks."""
         checks = [
             self.check_feeding_schedule(),
             self.water_refill_notification(),
@@ -59,9 +62,11 @@ class Task:
     pet: Optional[Pet] = field(default=None, repr=False)
 
     def mark_done(self) -> None:
+        """Set the task status to done."""
         self.status = "done"
 
     def is_pending(self) -> bool:
+        """Return True if the task has not been completed yet."""
         return self.status == "pending"
 
 
@@ -75,22 +80,27 @@ class Owner:
     tasks: list[Task] = field(default_factory=list)
 
     def add_task(self, task: Task) -> None:
+        """Assign this owner to the task and add it to the owner's task list."""
         task.owner = self
         self.tasks.append(task)
 
     def remove_task(self, task: Task) -> None:
+        """Remove a task from the owner's task list if it exists."""
         if task in self.tasks:
             self.tasks.remove(task)
 
     def edit_task(self, task: Task, **updates) -> None:
+        """Update any attributes on a task by passing keyword arguments."""
         for attr, value in updates.items():
             if hasattr(task, attr):
                 setattr(task, attr, value)
 
     def check_feeding_schedule(self) -> str:
+        """Return feeding reminders for all of this owner's pets."""
         return "\n".join(pet.check_feeding_schedule() for pet in self.pets)
 
     def check_pet_info(self) -> str:
+        """Return a summary of basic info for each of the owner's pets."""
         lines = []
         for pet in self.pets:
             lines.append(
@@ -100,12 +110,15 @@ class Owner:
         return "\n".join(lines)
 
     def vaccination_schedule_check(self) -> str:
+        """Return vaccination and treatment status for all of the owner's pets."""
         return "\n".join(pet.vaccination_schedule_check() for pet in self.pets)
 
     def daily_schedule_check(self) -> str:
+        """Return the full daily care summary for all of the owner's pets."""
         return "\n".join(pet.daily_schedule_check() for pet in self.pets)
 
     def vet_visit_schedule(self) -> str:
+        """Return upcoming vet visit dates for all of the owner's pets."""
         lines = []
         for pet in self.pets:
             if pet.next_vet_visit:
@@ -172,10 +185,12 @@ class Scheduler:
         ))
 
     def edit_schedule(self, task: Task, **updates) -> None:
+        """Edit a task's attributes and regenerate the schedule."""
         self.owner.edit_task(task, **updates)
         self.generate_schedule()
 
     def summary(self) -> str:
+        """Return a formatted string of today's schedule, vet visits, conflicts, and deferred tasks."""
         lines = [f"Schedule for {self.owner.name}'s pets\n{'='*40}"]
         if self.todays_schedule:
             lines.append("\nToday's Tasks:")

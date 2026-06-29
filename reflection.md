@@ -22,59 +22,137 @@ Scheduler	Logic engine	Takes an Owner + their Pet(s) + a list of Tasks, applies 
 **b. Design changes**
 
 - Did your design change during implementation?
-    Yes, below is how i changed it
+    Yes, below is how it was generated in the uml_draft.mmd file.
 
-1) Pet
-    - Attributes
-        1) Species (limited to 'Dog' or 'Cat')
-        2) Name
-        3) Date of Birth
-        4) Breed
-        5) 'Gotcha Day' Date
-        6) Next Vet Visit
-        7) Flea & Tick Prevention (Include Heartworm Prevention if Dog) due date
-    - Method
-        1) Check Feeding Schedule
-        2) Water Refill Notification
-        3) Vaccination Schedule Check
-        4) Daily Schedule Check
-2) Task
-    - Attributes
-        1) Frequency
-        2) Time
-        3) Priority
-        4) Status
-        5) Duration
-        6) Urgency
-    - Method
-        1) Add Task
-        2) Remove Task
-        3) Edit Task
-3) Owner
-    - Attributes
-        1) Name
-        2) Number of Pets
-        3) Availability
-        4) Age
-    - Method
-        1) Check Feeding Schedule
-        2) Check Pet Info
-        3) Vaccination Schedule Check
-        4) Daily Schedule Check
-        5) Vet Visit Schedule
-4) Scheduler
-    - Attributes
-        1) Today's Schedule
-        2) Deferred Tasks
-        3) Conflicts
-        4) Vet Visits
-    - Method
-        1) Generate Schedule
-        2) Sort Schedule
-        3) Edit Schedule
-The proposed design from Claude is below and i did change it during implementation
+classDiagram
+    class Pet {
+        +String species
+        +String name
+        +Date date_of_birth
+        +String breed
+        +Date gotcha_day
+        +Date next_vet_visit
+        +Date flea_tick_due
+        +Date heartworm_due
+        +check_feeding_schedule() void
+        +water_refill_notification() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+    }
+
+    class Task {
+        +String frequency
+        +Time time
+        +String priority
+        +String status
+        +int duration
+        +String urgency
+        +Owner owner
+        +Pet pet
+    }
+
+    class Owner {
+        +String name
+        +int number_of_pets
+        +List availability
+        +int age
+        +check_feeding_schedule() void
+        +check_pet_info() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+        +vet_visit_schedule() void
+        +add_task(task Task) void
+        +remove_task(task Task) void
+        +edit_task(task Task) void
+    }
+
+    class Scheduler {
+        +List todays_schedule
+        +List deferred_tasks
+        +List conflicts
+        +List vet_visits
+        +generate_schedule() void
+        +sort_schedule() void
+        +edit_schedule() void
+    }
+
+    Owner "1" --> "1..*" Pet : owns
+    Owner "1" --> "0..*" Task : manages
+    Scheduler "1" --> "1" Owner : schedules for
+    Scheduler "1" --> "0..*" Task : organizes
+    Pet "1" --> "0..*" Task : has care tasks
+
+
+    Below is how AI changed it after asking if it had noticed any logic bottlenecks or missing relationships (uml_AI_Updated.mmd file):
+    classDiagram
+    class Pet {
+        +String species
+        +String name
+        +Date date_of_birth
+        +String breed
+        +Date gotcha_day
+        +Date next_vet_visit
+        +Date flea_tick_due
+        +Date heartworm_due
+        +check_feeding_schedule() void
+        +water_refill_notification() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+    }
+
+    class Task {
+        +String title
+        +String frequency
+        +Time time
+        +String priority
+        +String status
+        +int duration
+        +String urgency
+        +Owner owner
+        +Pet pet
+    }
+
+    class Owner {
+        +String name
+        +int number_of_pets
+        +int age
+        +List availability
+        +List pets
+        +List tasks
+        +check_feeding_schedule() void
+        +check_pet_info() void
+        +vaccination_schedule_check() void
+        +daily_schedule_check() void
+        +vet_visit_schedule() void
+        +add_task(task Task) void
+        +remove_task(task Task) void
+        +edit_task(task Task) void
+    }
+
+    class Scheduler {
+        +Owner owner
+        +List~Task~ todays_schedule
+        +List~Task~ deferred_tasks
+        +List~Task~ conflicts
+        +List~Task~ vet_visits
+        +generate_schedule() void
+        +sort_schedule() void
+        +edit_schedule() void
+    }
+
+    Owner "1" --> "1..*" Pet : owns
+    Owner "1" --> "0..*" Task : manages
+    Scheduler "1" --> "1" Owner : schedules for
+    Scheduler "1" --> "0..*" Task : organizes
+    Pet "1" --> "0..*" Task : has care tasks
+
 - If yes, describe at least one change and why you made it.
-    I would like my pawpal+ app to give me good comprehensive information on the care of pets, including their gotcha day and birthday
+    Several referencing relationships were noted as missing and critical to logic flow. There were four in total but ill include two for briefness:
+
+    Owner has no way to hold references to its Pet objects — the UML says Owner 1 --> 1..* Pet but
+    there's no pets list attribute on Owner. Same for tasks — Owner 1 --> 0..* Task but no tasks list. The relationship arrows exist in the UML but the attributes that would implement them don't.
+    
+    Scheduler has no reference to the Pet objects it's scheduling for — it only knows about the Owner. To build a real schedule it'll need to reach the pets somehow.
 
 
 ---
@@ -84,13 +162,15 @@ The proposed design from Claude is below and i did change it during implementati
 **a. Constraints and priorities**
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
+    My scheduler mainly considers time and priority as the main constraints.
 - How did you decide which constraints mattered most?
-
+    I have a pet of my own and I would personally prioritize both time and priorit.
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+    It does not take into account preferences
 - Why is that tradeoff reasonable for this scenario?
-
+    Preference is very subjective and upto an owner and we should not hard code it as such as that would make the app inflexible to the owner's specific taste
 ---
 
 ## 3. AI Collaboration
