@@ -64,30 +64,84 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 
 ## 🧪 Testing PawPal+
 
+### Running the tests
+
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest tests/test_pawpal.py -v
 ```
 
-Sample test output:
+The suite currently contains **41 tests** across 4 areas of the scheduling system, all passing in under 0.1 seconds.
+
+### What the tests cover
+
+| Test class | Tests | What is verified |
+| --- | --- | --- |
+| `TestSortingCorrectness` | 4 | Priority-first ordering (`high → medium → low`), urgency as a tiebreaker, `sort_by_time()` overriding priority sort, stability on a single-task schedule |
+| `TestFiltering` | 5 | Filtering by status, by pet name, combined AND conditions, no-args passthrough returning all tasks, immutability (filter never mutates `todays_schedule`) |
+| `TestRecurrenceLogic` | 8 | Daily/weekly/monthly date advancement, February clamping on non-leap and leap years, December-to-January rollover, new task registration with the owner, one-time task returning `None`, original task marked done |
+| `TestConflictDetection` | 8 | Owner conflicts vs same-pet conflicts, 3-way combinatoric pairing, completed tasks excluded from detection, `generate_schedule()` bucketing behaviour, deferral outside availability, vet task routing |
+| `TestEdgeCases` | 14 | Empty schedule / no tasks, double `generate_schedule()` idempotency, open availability (no restrictions), recurrence preserving all field values, `pet=None` task excluded by pet-name filter, sorting and filtering on empty lists, conflict warning text content, same-time tasks across different due dates |
+
+### Sample output
 
 ```
-(.venv) PS C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter> .venv\Scripts\python.exe -m pytest tests/test_pawpal.py -v
-==================================================================================================================== test session starts ====================================================================================================================
-platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter\.venv\Scripts\python.exe
+============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0
 cachedir: .pytest_cache
 rootdir: C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter
 plugins: anyio-4.14.1
-collected 2 items                                                                                                                                                                                                                                            
+collecting ... collected 41 items
 
-tests/test_pawpal.py::test_mark_done_changes_status PASSED                                                                                                                                                                                             [ 50%]
-tests/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                                                                                    [100%]
+tests/test_pawpal.py::test_mark_done_changes_status PASSED               [  2%]
+tests/test_pawpal.py::test_add_task_increases_pet_task_count PASSED      [  4%]
+tests/test_pawpal.py::TestSortingCorrectness::test_sort_schedule_priority_order PASSED [  7%]
+tests/test_pawpal.py::TestSortingCorrectness::test_sort_schedule_urgency_tiebreaker PASSED [  9%]
+tests/test_pawpal.py::TestSortingCorrectness::test_sort_by_time_overrides_priority_sort PASSED [ 12%]
+tests/test_pawpal.py::TestSortingCorrectness::test_sort_by_time_stable_for_single_task PASSED [ 14%]
+tests/test_pawpal.py::TestFiltering::test_filter_by_status_pending PASSED [ 17%]
+tests/test_pawpal.py::TestFiltering::test_filter_by_pet_name PASSED      [ 19%]
+tests/test_pawpal.py::TestFiltering::test_filter_combined_status_and_pet PASSED [ 21%]
+tests/test_pawpal.py::TestFiltering::test_filter_no_args_returns_all PASSED [ 24%]
+tests/test_pawpal.py::TestFiltering::test_filter_does_not_mutate_schedule PASSED [ 26%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_daily_recurrence_advances_one_day PASSED [ 29%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_weekly_recurrence_advances_seven_days PASSED [ 31%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_monthly_recurrence_advances_one_month PASSED [ 34%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_monthly_recurrence_clamps_feb PASSED [ 36%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_monthly_recurrence_december_rolls_to_january PASSED [ 39%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_recurrence_registers_next_task_with_owner PASSED [ 41%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_one_time_task_returns_none PASSED [ 43%]
+tests/test_pawpal.py::TestRecurrenceLogic::test_completed_task_is_marked_done PASSED [ 46%]
+tests/test_pawpal.py::TestConflictDetection::test_same_time_different_pets_is_owner_conflict PASSED [ 48%]
+tests/test_pawpal.py::TestConflictDetection::test_same_time_same_pet_is_same_pet_conflict PASSED [ 51%]
+tests/test_pawpal.py::TestConflictDetection::test_no_conflict_different_times PASSED [ 53%]
+tests/test_pawpal.py::TestConflictDetection::test_three_tasks_same_time_produces_three_pairs PASSED [ 56%]
+tests/test_pawpal.py::TestConflictDetection::test_done_tasks_excluded_from_conflict_detection PASSED [ 58%]
+tests/test_pawpal.py::TestConflictDetection::test_generate_schedule_buckets_conflicts PASSED [ 60%]
+tests/test_pawpal.py::TestConflictDetection::test_deferred_tasks_outside_availability PASSED [ 63%]
+tests/test_pawpal.py::TestConflictDetection::test_vet_tasks_routed_to_vet_visits PASSED [ 65%]
+tests/test_pawpal.py::TestEdgeCases::test_generate_schedule_no_tasks PASSED [ 68%]
+tests/test_pawpal.py::TestEdgeCases::test_detect_conflicts_no_tasks PASSED [ 70%]
+tests/test_pawpal.py::TestEdgeCases::test_filter_tasks_empty_schedule PASSED [ 73%]
+tests/test_pawpal.py::TestEdgeCases::test_generate_schedule_resets_previous_results PASSED [ 75%]
+tests/test_pawpal.py::TestEdgeCases::test_empty_availability_lets_all_tasks_through PASSED [ 78%]
+tests/test_pawpal.py::TestEdgeCases::test_recurrence_preserves_all_task_fields PASSED [ 80%]
+tests/test_pawpal.py::TestEdgeCases::test_monthly_recurrence_leap_year_feb PASSED [ 82%]
+tests/test_pawpal.py::TestEdgeCases::test_complete_task_on_already_done_task PASSED [ 85%]
+tests/test_pawpal.py::TestEdgeCases::test_filter_nonexistent_pet_name_returns_empty PASSED [ 87%]
+tests/test_pawpal.py::TestEdgeCases::test_filter_task_with_no_pet_excluded_by_pet_name PASSED [ 90%]
+tests/test_pawpal.py::TestEdgeCases::test_sort_empty_schedule_does_not_crash PASSED [ 92%]
+tests/test_pawpal.py::TestEdgeCases::test_sort_schedule_all_same_priority_urgency_sorted_by_time PASSED [ 95%]
+tests/test_pawpal.py::TestEdgeCases::test_conflict_warning_includes_task_titles PASSED [ 97%]
+tests/test_pawpal.py::TestEdgeCases::test_no_false_conflict_across_different_days PASSED [100%]
 
-===================================================================================================================== 2 passed in 0.03s =====================================================================================================================
+============================= 41 passed in 0.05s ==============================
 ```
+
+### Reliability confidence
+
+★★★★☆ (4 / 5)
+
+The core scheduling logic — sorting, filtering, recurrence, and conflict detection — is thoroughly exercised including boundary conditions (leap years, month rollovers, empty inputs, repeated calls). The main gap is the Streamlit UI layer in `app.py`, which is not covered by automated tests and would require browser-level or snapshot testing to verify end-to-end. All 41 backend tests pass consistently.
 
 ## 📐 Smarter Scheduling
 
