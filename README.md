@@ -75,19 +75,115 @@ pytest --cov
 Sample test output:
 
 ```
+(.venv) PS C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter> .venv\Scripts\python.exe -m pytest tests/test_pawpal.py -v
+==================================================================================================================== test session starts ====================================================================================================================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\gonza\OneDrive\Desktop\CodePath\Unit-3\ai110-module2show-pawpal-starter
+plugins: anyio-4.14.1
+collected 2 items                                                                                                                                                                                                                                            
 
+tests/test_pawpal.py::test_mark_done_changes_status PASSED                                                                                                                                                                                             [ 50%]
+tests/test_pawpal.py::test_add_task_increases_pet_task_count PASSED                                                                                                                                                                                    [100%]
+
+===================================================================================================================== 2 passed in 0.03s =====================================================================================================================
 ```
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+PawPal+ implements four scheduling algorithms in `pawpal_system.py` that turn a flat list of pet care tasks into an organized, conflict-aware daily plan.
 
-| Feature | Method(s) | Notes |
-|---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+---
+
+### Sorting Behavior
+
+**Method:** `Scheduler.sort_schedule()` · `Scheduler.sort_by_time()`
+
+Tasks can be sorted two ways depending on what the owner needs:
+
+- **Priority-first** (`sort_schedule`) — the default sort applied automatically after every `generate_schedule()` call. Ranks tasks by priority (`high → medium → low`), then urgency, then time. Uses lookup dicts `PRIORITY_ORDER` and `URGENCY_ORDER` so the sort key is a simple tuple comparison.
+- **Chronological** (`sort_by_time`) — re-orders `todays_schedule` by the `HH:MM` time string. Works without parsing because zero-padded time strings sort correctly as plain strings (lexicographic order equals time order).
+
+```python
+scheduler.generate_schedule()   # priority-first by default
+scheduler.sort_by_time()        # switch to chronological view
+```
+
+---
+
+### Filtering Behavior
+
+**Method:** `Scheduler.filter_tasks(status, pet_name)`
+
+Returns a filtered subset of `todays_schedule` without mutating it. Both parameters are optional and combine as AND conditions:
+
+| Parameter  | Type  | Effect                                                       |
+|------------|-------|--------------------------------------------------------------|
+| `status`   | `str` | Keep only tasks matching `"pending"` or `"done"`             |
+| `pet_name` | `str` | Keep only tasks assigned to a pet with this name             |
+
+Passing neither argument returns all tasks unchanged. Tasks with no assigned pet are excluded when `pet_name` is provided.
+
+```python
+scheduler.filter_tasks(status="pending", pet_name="Mochi")  # Mochi's incomplete tasks only
+scheduler.filter_tasks(pet_name="Luna")                     # all of Luna's tasks
+scheduler.filter_tasks(status="done")                       # completed tasks across all pets
+```
+
+---
+
+### Conflict Detection Logic
+
+**Method:** `Scheduler.detect_conflicts()`
+
+Scans all pending pet tasks and returns a list of human-readable warning strings — never raises an exception. An empty list means the schedule is clean.
+
+**Algorithm:**
+
+1. Collect all pending tasks across every pet the owner owns.
+2. Group them into buckets by time slot using a `defaultdict`.
+3. For each bucket with two or more tasks, generate every unique pair with `itertools.combinations` (prevents duplicate `(a, b)` / `(b, a)` comparisons).
+4. Classify each pair by pet name:
+   - **Same pet** → `"Same-pet conflict"` — the pet is double-booked at that time.
+   - **Different pets** → `"Owner conflict"` — the owner can't physically attend both simultaneously.
+
+```python
+warnings = scheduler.detect_conflicts()
+for warning in warnings:
+    print(warning)
+# WARNING Same-pet conflict at 18:00: 'Evening walk' and 'Bath time' are both scheduled for Mochi.
+# WARNING Owner conflict at 08:00: 'Morning walk' (Mochi) and 'Luna breakfast' (Luna) overlap - you can't attend both.
+```
+
+---
+
+### Recurring Task Logic
+
+**Methods:** `Task.next_occurrence()` · `Scheduler.complete_task(task)`
+
+When a recurring task is marked complete, the system automatically generates the next instance and registers it with the owner — no manual re-entry needed.
+
+**`Task.next_occurrence()`** calculates the next `due_date` based on `frequency`:
+
+| Frequency   | Interval             | Notes                                                                                   |
+|-------------|----------------------|-----------------------------------------------------------------------------------------|
+| `"daily"`   | `timedelta(days=1)`  | Always exactly one day forward                                                          |
+| `"weekly"`  | `timedelta(weeks=1)` | Always exactly seven days forward                                                       |
+| `"monthly"` | Calendar-aware       | Clamps day to the true last day of the target month — handles leap years and rollovers  |
+
+**`Scheduler.complete_task(task)`** orchestrates the full completion flow:
+
+1. Marks the task as `"done"`.
+2. If `frequency` is `daily`, `weekly`, or `monthly`, calls `next_occurrence()`.
+3. Registers the new task with the owner automatically.
+4. Returns the new task (or `None` for non-recurring tasks).
+
+```python
+next_task = scheduler.complete_task(evening_walk)
+# evening_walk.status -> "done"
+# next_task.due_date  -> tomorrow's date
+# next_task.status    -> "pending"
+```
 
 ## 📸 Demo Walkthrough
 
