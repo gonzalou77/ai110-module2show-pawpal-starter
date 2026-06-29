@@ -631,3 +631,120 @@ class TestEdgeCases:
 
         # Current design keys on time string — both pending tasks at "08:00" do conflict
         assert len(warnings) == 1
+
+
+# ---------------------------------------------------------------------------
+# Next available slot
+# ---------------------------------------------------------------------------
+
+class TestNextAvailableSlot:
+
+    def test_returns_first_free_slot(self, sample_pet):
+        """When 08:00 is taken, next_available_slot() should return 12:00."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["08:00", "12:00", "18:00"],
+            pets=[sample_pet],
+        )
+        owner.add_task(make_task("Walk", "08:00", "high", "high", sample_pet))
+
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot() == "12:00"
+
+    def test_after_skips_earlier_slots(self, sample_pet):
+        """next_available_slot(after='08:00') should skip 08:00 and return 12:00."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["08:00", "12:00", "18:00"],
+            pets=[sample_pet],
+        )
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot(after="08:00") == "12:00"
+
+    def test_after_skips_equal_slot(self, sample_pet):
+        """after is strictly greater-than — the slot equal to after is excluded."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["08:00", "12:00"],
+            pets=[sample_pet],
+        )
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot(after="12:00") is None
+
+    def test_returns_none_when_all_slots_occupied(self, sample_pet):
+        """None is returned when every availability slot is already in todays_schedule."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["08:00", "12:00"],
+            pets=[sample_pet],
+        )
+        owner.add_task(make_task("Walk", "08:00", "high", "high", sample_pet))
+        owner.add_task(make_task("Feed", "12:00", "low",  "low",  sample_pet))
+
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot() is None
+
+    def test_returns_none_when_availability_empty(self, sample_pet):
+        """With no availability defined, there are no slots to suggest."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=[],
+            pets=[sample_pet],
+        )
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot() is None
+
+    def test_slots_evaluated_in_sorted_order(self, sample_pet):
+        """Slots are compared lexicographically so the earliest free slot is returned
+        regardless of the order they were entered in owner.availability."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["18:00", "08:00", "12:00"],  # unsorted on purpose
+            pets=[sample_pet],
+        )
+        owner.add_task(make_task("Walk", "08:00", "high", "high", sample_pet))
+
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot() == "12:00"
+
+    def test_all_slots_free_returns_first(self, sample_pet):
+        """When no tasks are scheduled, the first sorted availability slot is returned."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["12:00", "08:00", "18:00"],
+            pets=[sample_pet],
+        )
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        assert scheduler.next_available_slot() == "08:00"
+
+    def test_suggestion_differs_per_conflicted_task(self, sample_pet):
+        """Passing different `after` values for two conflicted tasks can yield
+        different suggestions, giving each task its own best slot."""
+        owner = Owner(
+            name="Jordan", number_of_pets=1, age=30,
+            availability=["08:00", "12:00", "18:00"],
+            pets=[sample_pet],
+        )
+        owner.add_task(make_task("Walk", "08:00", "high", "high", sample_pet))
+
+        scheduler = Scheduler(owner=owner)
+        scheduler.generate_schedule()
+
+        # task conflicted at 08:00 -> suggest 12:00
+        assert scheduler.next_available_slot(after="08:00") == "12:00"
+        # task conflicted at 12:00 -> suggest 18:00
+        assert scheduler.next_available_slot(after="12:00") == "18:00"

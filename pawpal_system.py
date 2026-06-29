@@ -1,5 +1,7 @@
 from __future__ import annotations
 import calendar
+import json
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -220,10 +222,9 @@ class Scheduler:
         self.sort_schedule()
 
     def sort_schedule(self) -> None:
-        """Sort todays_schedule by priority then urgency, then time."""
+        """Sort todays_schedule by priority then time."""
         self.todays_schedule.sort(key=lambda t: (
             PRIORITY_ORDER.get(t.priority, 99),
-            URGENCY_ORDER.get(t.urgency, 99),
             t.time,
         ))
 
@@ -306,6 +307,35 @@ class Scheduler:
             return next_task
         return None
 
+    def next_available_slot(self, after: Optional[str] = None) -> Optional[str]:
+        """
+        Return the first time slot in owner.availability that is not already
+        occupied in todays_schedule, or None if every slot is taken.
+
+        Parameters
+        ----------
+        after : str, optional
+            A zero-padded HH:MM string. When supplied, only slots that sort
+            strictly after this value are considered. This lets callers find
+            a replacement slot for a specific conflicted or deferred task
+            (e.g. pass the task's own time to skip it and look forward).
+
+        Algorithm
+        ---------
+        1. Collect the set of times already claimed by todays_schedule.
+        2. Sort owner.availability lexicographically (HH:MM strings sort
+           correctly without parsing).
+        3. Walk the sorted list and return the first slot that is both free
+           and, when `after` is given, strictly greater than `after`.
+        """
+        occupied = {t.time for t in self.todays_schedule}
+        for slot in sorted(self.owner.availability):
+            if after is not None and slot <= after:
+                continue
+            if slot not in occupied:
+                return slot
+        return None
+
     def edit_schedule(self, task: Task, **updates) -> None:
         """Edit a task's attributes and regenerate the schedule."""
         self.owner.edit_task(task, **updates)
@@ -331,3 +361,90 @@ class Scheduler:
             for t in self.deferred_tasks:
                 lines.append(f"  [{t.time}] {t.title}")
         return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# JSON persistence helpers
+# ---------------------------------------------------------------------------
+
+_DATE_FIELDS_PET  = ("date_of_birth", "gotcha_day", "next_vet_visit")
+_DATE_FIELDS_TASK = ("due_date",)
+
+
+def _serialize_pet(pet: dict) -> dict:
+    """Convert a pet dict's date values to ISO strings for JSON serialisation."""
+    out = dict(pet)
+    for key in _DATE_FIELDS_PET:
+        val = out.get(key)
+        out[key] = val.isoformat() if isinstance(val, date) else val
+    return out
+
+
+def _deserialize_pet(pet: dict) -> dict:
+    """Convert ISO date strings back to date objects in a pet dict."""
+    out = dict(pet)
+    for key in _DATE_FIELDS_PET:
+        val = out.get(key)
+        out[key] = date.fromisoformat(val) if isinstance(val, str) else val
+    return out
+
+
+def _serialize_task(task: dict) -> dict:
+    """Convert a task dict's date values to ISO strings for JSON serialisation."""
+    out = dict(task)
+    for key in _DATE_FIELDS_TASK:
+        val = out.get(key)
+        out[key] = val.isoformat() if isinstance(val, date) else val
+    return out
+
+
+def _deserialize_task(task: dict) -> dict:
+    """Convert ISO date strings back to date objects in a task dict."""
+    out = dict(task)
+    for key in _DATE_FIELDS_TASK:
+        val = out.get(key)
+        out[key] = date.fromisoformat(val) if isinstance(val, str) else val
+    return out
+
+
+def save_to_json(pets: list[dict], tasks: list[dict], path: str = "data.json") -> None:
+    """
+    Persist the current pets and tasks to a JSON file.
+
+    Accepts the raw dict lists that Streamlit stores in session_state.
+    date objects are serialised to ISO-8601 strings (YYYY-MM-DD); None
+    values are preserved as JSON null.
+
+    Parameters
+    ----------
+    pets  : list of pet dicts from session_state.pets
+    tasks : list of task dicts from session_state.tasks
+    path  : destination file path (default: data.json in the working directory)
+    """
+    payload = {
+        "pets":  [_serialize_pet(p)  for p in pets],
+        "tasks": [_serialize_task(t) for t in tasks],
+    }
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+
+
+def load_from_json(path: str = "data.json") -> tuple[list[dict], list[dict]]:
+    """
+    Load pets and tasks from a JSON file previously written by save_to_json.
+
+    Returns (pets, tasks) as lists of dicts ready to be assigned back to
+    session_state. ISO date strings are converted back to date objects.
+    Returns two empty lists when the file does not exist yet.
+
+    Parameters
+    ----------
+    path : source file path (default: data.json in the working directory)
+    """
+    if not os.path.exists(path):
+        return [], []
+    with open(path, encoding="utf-8") as fh:
+        payload = json.load(fh)
+    pets  = [_deserialize_pet(p)  for p in payload.get("pets",  [])]
+    tasks = [_deserialize_task(t) for t in payload.get("tasks", [])]
+    return pets, tasks

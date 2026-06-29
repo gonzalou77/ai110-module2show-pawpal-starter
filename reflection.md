@@ -178,14 +178,15 @@ classDiagram
 **a. How you used AI**
 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-
+    I used AI primarily for design brain storming.
 - What kinds of prompts or questions were most helpful?
-
+    Few shot prompts were the most helpful as it added more context to the prompt and help mitigate hidden assumptions that might have been detrimental to the functionality of the app
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
+    The main suggestion i typically did not accept was running the app before I was ready to run it. Another was the implementation of the main.py file. The CLI output was not initially helpful as the output did not show a proper before and after output which would indicate proper functionality of the sorting and filtering methods.
 - How did you evaluate or verify what the AI suggested?
-
+    I evaluated the AI suggestions by using the main.py file. This was instrumental to determining whether added features  were in fact functional or not
 ---
 
 ## 4. Testing and Verification
@@ -193,13 +194,16 @@ classDiagram
 **a. What you tested**
 
 - What behaviors did you test?
+    Sorting and filtering
 - Why were these tests important?
-
+    I needed to ensure that sorting by scheduling time and filtering by tasks was done correctly as they were essential to the functionality and utility of the app.
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
+    I am very confident that it works correctly.
 - What edge cases would you test next if you had more time?
-
+    I would test for edge cases where there are duplicate tasks with different priority settings.
+    Additionally, I would test for pets with conflicting veterinary doctor visits.
 ---
 
 ## 5. Reflection
@@ -207,11 +211,14 @@ classDiagram
 **a. What went well**
 
 - What part of this project are you most satisfied with?
+I am most satisfied by the object oriented architecting of the logic and connection to the streamlit UI. This was the most efficient and enjoyable time i had developing a streamlit app
 
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
+I would add features that would change the UI layour OR provide limited pre written tasks and schedules for exotic pets as different pets have highly specific and niche needs.
 
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+contextualization is an important part of designing systems with AI. Without proper context or specificity, hidden assumptions cannot be mitigated properly.

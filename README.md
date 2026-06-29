@@ -62,6 +62,127 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #  [08:00] Feed Luna � needs rescheduling
 ```
 
+## 💾 Data Persistence
+
+PawPal+ automatically saves and restores your pets and tasks between app restarts using a local `data.json` file. No database or cloud service is required — the file lives in the project root alongside `app.py`.
+
+### Files modified
+
+| File | What was changed |
+| --- | --- |
+| `pawpal_system.py` | Added `save_to_json()` and `load_from_json()` module-level functions, plus four private serialisation helpers |
+| `app.py` | Imports the two new functions; loads saved data on first render; calls `save_to_json()` after every successful pet or task addition |
+
+### How it works
+
+**On startup** — the first time Streamlit renders the page in a new session, `session_state.pets` and `session_state.tasks` do not exist yet. The app calls `load_from_json("data.json")` at that moment. If the file exists, the saved pets and tasks are read back and placed directly into `session_state` so the UI populates immediately. If the file does not exist (first ever run), two empty lists are returned and the app starts fresh.
+
+**On every add** — whenever the user submits the "Add pet" or "Add task" form and the entry passes duplicate-checking, the new item is appended to `session_state` and `save_to_json()` is called immediately after. This keeps `data.json` in sync with every change without requiring a separate Save button.
+
+**Date serialisation** — `date` objects (date of birth, gotcha day, next vet visit, task due date) cannot be written to JSON directly. `save_to_json()` converts them to ISO-8601 strings (`"2026-08-01"`) before writing. `load_from_json()` converts them back to `date` objects on the way in. `None` values (e.g. a pet with no scheduled vet visit) are preserved as JSON `null` and round-trip without any special handling.
+
+### Workflow diagram
+
+```
+App starts
+    │
+    ▼
+session_state.pets missing?
+    │  Yes
+    ├──► load_from_json("data.json")
+    │        │
+    │        ├── file exists  ──► deserialise dates ──► populate session_state
+    │        └── no file yet  ──► return ([], [])   ──► session_state starts empty
+    │  No (page rerun, data already in memory)
+    └──► skip load
+
+User adds pet or task
+    │
+    ▼
+Append to session_state
+    │
+    ▼
+save_to_json("data.json")
+    │
+    ▼
+Serialise date objects to ISO strings ──► write JSON to disk
+```
+
+### The data.json format
+
+```json
+{
+  "pets": [
+    {
+      "name": "Mochi",
+      "species": "Dog",
+      "breed": "Shiba Inu",
+      "date_of_birth": "2019-04-12",
+      "gotcha_day": "2019-06-01",
+      "next_vet_visit": "2026-08-01"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Morning walk",
+      "pet": "Mochi",
+      "time": "08:00",
+      "priority": "high",
+      "urgency": "high",
+      "duration": 30,
+      "frequency": "daily",
+      "status": "pending"
+    }
+  ]
+}
+```
+
+---
+
+## 🔃 Enhanced Sort Logic
+
+### What changed
+
+`Scheduler.sort_schedule()` previously sorted by **priority → urgency → time**. The sort key has been simplified to **priority → time**, making the output more predictable: within a priority band tasks always appear in the order the owner will encounter them during the day.
+
+| Sort method | Key |
+| --- | --- |
+| `sort_schedule()` (default) | priority first, then time |
+| `sort_by_time()` | time only |
+
+### Before / after demo (`main.py`)
+
+`main.py` now prints three views of the same task list so the difference is visible at a glance:
+
+1. **Raw insertion order** — tasks exactly as they were added to the owner, unsorted
+2. **After `sort_schedule()`** — priority bands respected; within each band tasks run earliest-to-latest
+3. **After `sort_by_time()`** — pure chronological order, priority ignored
+
+### CLI output (`python main.py`)
+
+```text
+--- Today's Tasks BEFORE Sorting ---
+  [18:00] Evening walk (45 min | medium priority | for Mochi)
+  [12:00] Flea/tick treatment for Mochi (10 min | medium priority | for Mochi)
+  [08:00] Feed Luna (5 min | high priority | for Luna)
+  [12:00] Vet checkup for Luna (60 min | high priority | for Luna)
+  [08:00] Morning walk (30 min | high priority | for Mochi)
+
+--- Today's Tasks AFTER sort_schedule() — priority first, then time ---
+  [08:00] Feed Luna (5 min | high priority | for Luna)
+  [12:00] Flea/tick treatment for Mochi (10 min | medium priority | for Mochi)
+  [18:00] Evening walk (45 min | medium priority | for Mochi)
+
+--- Today's Tasks AFTER sort_by_time() — chronological only ---
+  [08:00] Feed Luna (5 min | high priority | for Luna)
+  [12:00] Flea/tick treatment for Mochi (10 min | medium priority | for Mochi)
+  [18:00] Evening walk (45 min | medium priority | for Mochi)
+```
+
+The "BEFORE" view shows five tasks in insertion order (medium tasks first, high tasks buried at the end). After `sort_schedule()`, the single high-priority task (`Feed Luna`) rises to the top and the two medium tasks follow, each sorted by time within their band. `sort_by_time()` produces the same result here because the tasks happen to span distinct time slots — the difference becomes significant when multiple priority levels share a time slot.
+
+---
+
 ## 🧪 Testing PawPal+
 
 ### Running the tests
@@ -241,12 +362,105 @@ next_task = scheduler.complete_task(evening_walk)
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+### UI Features and Available Actions
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+The Streamlit app is divided into four sections, each building on the last:
+
+| Section | What you can do |
+| --- | --- |
+| **Owner Info** | Enter your name, age, and number of pets; select which time slots you are available during the day |
+| **Pets** | Add as many pets as needed (name, species, breed, date of birth, gotcha day, optional next vet date); all added pets appear in a summary table |
+| **Tasks** | Create tasks per pet with a title, time slot, priority, urgency, duration, and recurrence frequency; duplicate task/pet combos are blocked |
+| **Generate Schedule** | Toggle between priority-first and time-first sort, then click the button to run the scheduler and view results organized into four labeled tables: Today's Tasks, Vet Visits, Bumped Conflicts, and Deferred Tasks |
+
+---
+
+### Example Workflow
+
+1. Fill in the **Owner Info** fields — name, age, number of pets — and select your available time slots (e.g. `08:00`, `12:00`, `18:00`).
+2. In the **Pets** section, add your first pet: Mochi, Dog, Shiba Inu. Submit the form. Add a second pet: Luna, Cat, Tabby.
+3. In the **Tasks** section, add the following tasks:
+   - "Morning walk" at `08:00` — high priority, daily, for Mochi
+   - "Feed Luna" at `08:00` — high priority, daily, for Luna *(same slot as Morning walk — will conflict)*
+   - "Flea/tick treatment" at `12:00` — medium priority, monthly, for Mochi
+   - "Evening walk" at `18:00` — medium priority, daily, for Mochi
+   - "Vet checkup for Luna" at `12:00` — high priority, for Luna *(title contains "vet" — routed to Vet Visits)*
+4. Click **Generate schedule**. The app calls `Scheduler.generate_schedule()`, then `detect_conflicts()`, and renders each result table.
+5. Toggle **Sort by time** on and click Generate again to switch from priority-first to chronological order.
+
+---
+
+### Key Scheduler Behaviors Shown
+
+- **Priority + urgency sort** — Today's Tasks render high-priority items first by default, with urgency breaking any ties at the same priority level.
+- **Time-slot sort** — Toggling "Sort by time" calls `scheduler.sort_by_time()`, reordering the same tasks chronologically without regenerating the schedule.
+- **Vet task routing** — Any task whose title contains the word "vet" (case-insensitive) is automatically separated into the Vet Visits table rather than Today's Tasks.
+- **Conflict detection** — `detect_conflicts()` scans all pending tasks and surfaces two warning types: a *same-pet conflict* when one pet is double-booked, and an *owner conflict* when two different pets need attention at the same moment.
+- **Availability deferral** — Tasks whose time slot is not in the owner's selected availability are moved to the Deferred Tasks table rather than silently dropped.
+- **Recurrence** — Completing a daily, weekly, or monthly task via `complete_task()` automatically creates the next occurrence and registers it with the owner; no manual re-entry required.
+
+---
+
+### Sample CLI Output (`python main.py`)
+
+```text
+Schedule for Jordan's pets
+========================================
+
+Today's Tasks:
+  [08:00] Feed Luna (5 min) — high priority
+  [12:00] Flea/tick treatment for Mochi (10 min) — medium priority
+  [18:00] Evening walk (45 min) — medium priority
+
+Vet Visits:
+  [12:00] Vet checkup for Luna
+
+Conflicts (same time slot):
+  [08:00] Morning walk — needs rescheduling
+
+--- Today's Tasks BEFORE Sorting ---
+  [18:00] Evening walk (45 min | medium priority | for Mochi)
+  [12:00] Flea/tick treatment for Mochi (10 min | medium priority | for Mochi)
+  [08:00] Feed Luna (5 min | high priority | for Luna)
+  [12:00] Vet checkup for Luna (60 min | high priority | for Luna)
+  [08:00] Morning walk (30 min | high priority | for Mochi)
+
+--- Today's Tasks AFTER Sorting by Time ---
+  [08:00] Feed Luna (5 min | high priority | for Luna)
+  [12:00] Flea/tick treatment for Mochi (10 min | medium priority | for Mochi)
+  [18:00] Evening walk (45 min | medium priority | for Mochi)
+
+--- All Tasks BEFORE Filtering ---
+  [08:00] Feed Luna | pet: Luna | status: pending
+  [12:00] Flea/tick treatment for Mochi | pet: Mochi | status: pending
+  [18:00] Evening walk | pet: Mochi | status: pending
+
+--- Tasks AFTER Filtering (Mochi | pending only) ---
+  [12:00] Flea/tick treatment for Mochi | pet: Mochi | status: pending
+  [18:00] Evening walk | pet: Mochi | status: pending
+
+--- Completing 'Evening walk' (daily recurring) ---
+  'Evening walk' marked: done | was due: 2026-06-29
+  Next occurrence auto-created: 'Evening walk' | due: 2026-06-30 | status: pending
+
+--- Completing 'Flea/tick treatment' (monthly recurring) ---
+  'Flea/tick treatment for Mochi' marked: done | was due: 2026-06-29
+  Next occurrence auto-created: 'Flea/tick treatment for Mochi' | due: 2026-07-29 | status: pending
+
+==================================================
+CONFLICT DETECTION DEMO
+==================================================
+Tasks intentionally scheduled at the same time:
+  [18:00] Evening walk   (Mochi)  <-- same time
+  [18:00] Bath time      (Mochi)  <-- same time, same pet
+  [08:00] Morning walk   (Mochi)  <-- same time
+  [08:00] Luna breakfast (Luna)   <-- same time, different pet
+
+  WARNING Owner conflict at 08:00: 'Feed Luna' (Luna) and 'Morning walk' (Mochi) overlap - you can't attend both.
+  WARNING Same-pet conflict at 08:00: 'Feed Luna' and 'Luna breakfast' are both scheduled for Luna.
+  WARNING Owner conflict at 08:00: 'Morning walk' (Mochi) and 'Luna breakfast' (Luna) overlap - you can't attend both.
+  WARNING Owner conflict at 12:00: 'Vet checkup for Luna' (Luna) and 'Flea/tick treatment for Mochi' (Mochi) overlap - you can't attend both.
+  WARNING Same-pet conflict at 18:00: 'Evening walk' and 'Bath time' are both scheduled for Mochi.
+```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->

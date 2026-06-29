@@ -104,9 +104,15 @@ print("\n--- Today's Tasks BEFORE Sorting ---")
 for task in raw_order:
     print(f"  [{task.time}] {task.title} ({task.duration} min | {task.priority} priority | for {task.pet.name if task.pet else 'N/A'})")
 
-# --- Sort by time ---
+# --- Priority-first then time sort (default after generate_schedule) ---
+print("\n--- Today's Tasks AFTER sort_schedule() — priority first, then time ---")
+scheduler.sort_schedule()
+for task in scheduler.todays_schedule:
+    print(f"  [{task.time}] {task.title} ({task.duration} min | {task.priority} priority | for {task.pet.name if task.pet else 'N/A'})")
+
+# --- Sort by time only ---
 scheduler.sort_by_time()
-print("\n--- Today's Tasks AFTER Sorting by Time ---")
+print("\n--- Today's Tasks AFTER sort_by_time() — chronological only ---")
 for task in scheduler.todays_schedule:
     print(f"  [{task.time}] {task.title} ({task.duration} min | {task.priority} priority | for {task.pet.name if task.pet else 'N/A'})")
 

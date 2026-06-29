@@ -1,0 +1,72 @@
+classDiagram
+    class Pet {
+        +String species
+        +String name
+        +Date date_of_birth
+        +String breed
+        +Date gotcha_day
+        +Date next_vet_visit
+        +Date flea_tick_due
+        +Date heartworm_due
+        +check_feeding_schedule() String
+        +water_refill_notification() String
+        +vaccination_schedule_check() String
+        +daily_schedule_check() String
+    }
+
+    class Task {
+        +String title
+        +String frequency
+        +String time
+        +String priority
+        +String status
+        +int duration
+        +String urgency
+        +Date due_date
+        +Owner owner
+        +Pet pet
+        +mark_done() None
+        +is_pending() bool
+        +next_occurrence() Task
+    }
+
+    class Owner {
+        +String name
+        +int number_of_pets
+        +int age
+        +List~String~ availability
+        +List~Pet~ pets
+        +List~Task~ tasks
+        +add_task(task Task) None
+        +remove_task(task Task) None
+        +edit_task(task Task) None
+        +check_feeding_schedule() String
+        +check_pet_info() String
+        +vaccination_schedule_check() String
+        +daily_schedule_check() String
+        +vet_visit_schedule() String
+        +all_pet_tasks() List~Task~
+    }
+
+    class Scheduler {
+        +Owner owner
+        +List~Task~ todays_schedule
+        +List~Task~ deferred_tasks
+        +List~Task~ conflicts
+        +List~Task~ vet_visits
+        +generate_schedule() None
+        +sort_schedule() None
+        +sort_by_time() None
+        +filter_tasks(status, pet_name) List~Task~
+        +detect_conflicts() List~String~
+        +complete_task(task Task) Task
+        +edit_schedule(task Task) None
+    }
+
+    note for Scheduler "sort_schedule() uses PRIORITY_ORDER and\nURGENCY_ORDER module-level dicts as sort keys"
+
+    Owner "1" *-- "1..*" Pet : owns
+    Owner "1" *-- "0..*" Task : manages
+    Task "0..*" --> "0..1" Pet : assigned to
+    Scheduler "1" --> "1" Owner : schedules for
+    Scheduler "1" ..> "0..*" Task : buckets into schedule
